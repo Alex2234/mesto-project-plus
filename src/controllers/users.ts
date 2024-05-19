@@ -1,11 +1,14 @@
 import { Request, Response } from "express";
 import User from "../models/user";
+import { HTTP_STATUS_CODES, ERROR_MESSAGES } from "../utils/constants";
 
 export const getUsers = (req: Request, res: Response) => {
   return User.find({})
-    .then((users) => res.send({ data: users }))
+    .then((users) => res.status(HTTP_STATUS_CODES.OK).send({ data: users }))
     .catch(() =>
-      res.status(500).send({ message: "Произошла ошибка на сервере" })
+      res
+        .status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR)
+        .send({ message: ERROR_MESSAGES.SERVER_ERROR })
     );
 };
 
@@ -15,12 +18,16 @@ export const getUserId = (req: Request, res: Response) => {
   return User.findById(userId)
     .then((user) => {
       if (!user) {
-        return res.status(404).send({ message: "Пользователь не найден" });
+        return res
+          .status(HTTP_STATUS_CODES.NOT_FOUND)
+          .send({ message: ERROR_MESSAGES.USER_NOT_FOUND });
       }
       return res.send({ data: user });
     })
-    .catch((err) =>
-      res.status(500).send({ message: "Произошла ошибка на сервере" })
+    .catch(() =>
+      res
+        .status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR)
+        .send({ message: ERROR_MESSAGES.SERVER_ERROR })
     );
 };
 
@@ -28,14 +35,16 @@ export const createUser = (req: Request, res: Response) => {
   const { name, about, avatar } = req.body;
 
   return User.create({ name, about, avatar })
-    .then((user) => res.send({ data: user }))
+    .then((user) => res.status(HTTP_STATUS_CODES.CREATED).send({ data: user }))
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res.status(400).send({
-          message: "Переданы некорректные данные при создании пользователя",
+        return res.status(HTTP_STATUS_CODES.BAD_REQUEST).send({
+          message: ERROR_MESSAGES.VALIDATION_ERROR,
         });
       }
-      return res.status(500).send({ message: "Произошла ошибка на сервере" });
+      return res
+        .status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR)
+        .send({ message: ERROR_MESSAGES.SERVER_ERROR });
     });
 };
 
@@ -49,17 +58,21 @@ export const updateUser = (req: Request, res: Response) => {
   )
     .then((user) => {
       if (!user) {
-        return res.status(404).send({ message: "Пользователь не найден" });
+        return res
+          .status(HTTP_STATUS_CODES.NOT_FOUND)
+          .send({ message: ERROR_MESSAGES.USER_NOT_FOUND });
       }
       return res.send({ data: user });
     })
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res.status(400).send({
-          message: "Переданы некорректные данные при обновлении профиля",
+        return res.status(HTTP_STATUS_CODES.BAD_REQUEST).send({
+          message: ERROR_MESSAGES.VALIDATION_ERROR,
         });
       }
-      return res.status(500).send({ message: "Произошла ошибка на сервере" });
+      return res
+        .status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR)
+        .send({ message: ERROR_MESSAGES.SERVER_ERROR });
     });
 };
 
@@ -73,16 +86,20 @@ export const updateAvatar = (req: Request, res: Response) => {
   )
     .then((user) => {
       if (!user) {
-        return res.status(404).send({ message: "Пользователь не найден" });
+        return res
+          .status(HTTP_STATUS_CODES.NOT_FOUND)
+          .send({ message: ERROR_MESSAGES.USER_NOT_FOUND });
       }
       return res.send({ data: user });
     })
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res.status(400).send({
-          message: "Переданы некорректные данные при обновлении аватара",
+        return res.status(HTTP_STATUS_CODES.BAD_REQUEST).send({
+          message: ERROR_MESSAGES.VALIDATION_ERROR,
         });
       }
-      return res.status(500).send({ message: "Произошла ошибка на сервере" });
+      return res
+        .status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR)
+        .send({ message: ERROR_MESSAGES.SERVER_ERROR });
     });
 };
