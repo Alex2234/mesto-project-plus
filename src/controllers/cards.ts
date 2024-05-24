@@ -55,9 +55,9 @@ export const deleteCard = (
     .catch(next);
 };
 
-export const likeCard = (req: Request, res: Response, next: NextFunction) => {
+export const likeCard = (req: MeRequest, res: Response, next: NextFunction) => {
   const { cardId } = req.params;
-  const userId = res.locals.user._id;
+  const userId = req.user?._id;
 
   return Card.findByIdAndUpdate(
     cardId,
@@ -83,12 +83,12 @@ export const likeCard = (req: Request, res: Response, next: NextFunction) => {
 };
 
 export const dislikeCard = (
-  req: Request,
+  req: MeRequest,
   res: Response,
   next: NextFunction
 ) => {
   const { cardId } = req.params;
-  const userId = res.locals.user._id;
+  const userId = req.user?._id;
 
   return Card.findByIdAndUpdate(
     cardId,
