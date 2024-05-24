@@ -1,20 +1,21 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import Card from "../models/card";
 import { HTTP_STATUS_CODES, ERROR_MESSAGES } from "../utils/constants";
+import { MeRequest } from "../types";
 
-export const getCards = (req: Request, res: Response) => {
+export const getCards = (req: Request, res: Response, next: NextFunction) => {
   return Card.find({})
     .then((cards) => res.status(HTTP_STATUS_CODES.OK).send({ data: cards }))
-    .catch(() =>
-      res
-        .status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR)
-        .send({ message: ERROR_MESSAGES.SERVER_ERROR })
-    );
+    .catch(next);
 };
 
-export const createCard = (req: Request, res: Response) => {
+export const createCard = (
+  req: MeRequest,
+  res: Response,
+  next: NextFunction
+) => {
   const { name, link } = req.body;
-  const owner = res.locals.user._id;
+  const owner = req.user?._id;
 
   return Card.create({ name, link, owner })
     .then((card) => res.status(HTTP_STATUS_CODES.CREATED).send({ data: card }))
@@ -24,14 +25,17 @@ export const createCard = (req: Request, res: Response) => {
           message: ERROR_MESSAGES.VALIDATION_ERROR,
         });
       }
-      return res
-        .status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR)
-        .send({ message: ERROR_MESSAGES.SERVER_ERROR });
+      return next;
     });
 };
 
-export const deleteCard = (req: Request, res: Response) => {
+export const deleteCard = (
+  req: MeRequest,
+  res: Response,
+  next: NextFunction
+) => {
   const { cardId } = req.params;
+  const userId = req.user?._id;
 
   return Card.findById(cardId)
     .then((card) => {
@@ -39,20 +43,19 @@ export const deleteCard = (req: Request, res: Response) => {
         return res.status(HTTP_STATUS_CODES.NOT_FOUND).send({
           message: ERROR_MESSAGES.CARD_NOT_FOUND,
         });
+      } else if (card.owner.toString() !== userId) {
+        res
+          .status(HTTP_STATUS_CODES.FORBIDDEN)
+          .send({ message: ERROR_MESSAGES.FORBIDDEN_CARD });
       }
-
       return card
         .remove()
         .then(() => res.send({ message: "Карточка удалена" }));
     })
-    .catch(() =>
-      res
-        .status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR)
-        .send({ message: ERROR_MESSAGES.SERVER_ERROR })
-    );
+    .catch(next);
 };
 
-export const likeCard = (req: Request, res: Response) => {
+export const likeCard = (req: Request, res: Response, next: NextFunction) => {
   const { cardId } = req.params;
   const userId = res.locals.user._id;
 
@@ -75,13 +78,15 @@ export const likeCard = (req: Request, res: Response) => {
           message: ERROR_MESSAGES.VALIDATION_ERROR,
         });
       }
-      return res
-        .status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR)
-        .send({ message: ERROR_MESSAGES.SERVER_ERROR });
+      return next;
     });
 };
 
-export const dislikeCard = (req: Request, res: Response) => {
+export const dislikeCard = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const { cardId } = req.params;
   const userId = res.locals.user._id;
 
@@ -104,8 +109,6 @@ export const dislikeCard = (req: Request, res: Response) => {
           message: ERROR_MESSAGES.VALIDATION_ERROR,
         });
       }
-      return res
-        .status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR)
-        .send({ message: ERROR_MESSAGES.SERVER_ERROR });
+      return next;
     });
 };
