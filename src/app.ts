@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
+import { config } from "../config";
 import router from "./routes/index";
 import { createUser, login } from "./controllers/users";
 import auth from "./middlewares/auth";
@@ -11,15 +12,13 @@ import {
   validationLogin,
 } from "./middlewares/validation";
 import { errors } from "celebrate";
-
-const { PORT = 3000, MONGO_URL = "mongodb://127.0.0.1:27017/mestodb" } =
-  process.env;
+import notFoundRoute from "./middlewares/notFoundRoute";
 
 const app = express();
 
 app.use(express.json());
 
-mongoose.connect(MONGO_URL);
+mongoose.connect(config.mongoUrl);
 
 app.use(requestLogger);
 
@@ -33,8 +32,9 @@ app.use(router);
 app.use(errorLogger);
 
 app.use(errors());
+app.use(notFoundRoute);
 app.use(errorCenter);
 
-app.listen(PORT, () => {
-  console.log(`App listening on port ${PORT}`);
+app.listen(config.port, () => {
+  console.log(`App listening on port ${config.port}`);
 });

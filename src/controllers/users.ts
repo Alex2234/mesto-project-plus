@@ -4,9 +4,15 @@ import { HTTP_STATUS_CODES, ERROR_MESSAGES } from "../utils/constants";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { MeRequest } from "../types";
+import {
+  BadRequestError,
+  NotFoundError,
+  ConflictError,
+  UnauthorizedError,
+} from "../errors/customErrors";
 
 export const getUsers = (req: Request, res: Response, next: NextFunction) => {
-  return User.find({})
+  User.find({})
     .then((users) => res.status(HTTP_STATUS_CODES.OK).send({ data: users }))
     .catch(next);
 };
@@ -14,14 +20,12 @@ export const getUsers = (req: Request, res: Response, next: NextFunction) => {
 export const getUserId = (req: Request, res: Response, next: NextFunction) => {
   const { userId } = req.params;
 
-  return User.findById(userId)
+  User.findById(userId)
     .then((user) => {
       if (!user) {
-        return res
-          .status(HTTP_STATUS_CODES.NOT_FOUND)
-          .send({ message: ERROR_MESSAGES.USER_NOT_FOUND });
+        throw new NotFoundError(ERROR_MESSAGES.USER_NOT_FOUND);
       }
-      return res.send({ data: user });
+      res.send({ data: user });
     })
     .catch(next);
 };
@@ -39,15 +43,12 @@ export const createUser = (req: Request, res: Response, next: NextFunction) => {
     })
     .catch((err) => {
       if (err.code === 11000) {
-        return res.status(HTTP_STATUS_CODES.CONFLICT).send({
-          message: "Пользователь с таким email уже существует",
-        });
+        next(new ConflictError("Пользователь с таким email уже существует"));
       } else if (err.name === "ValidationError") {
-        return res.status(HTTP_STATUS_CODES.BAD_REQUEST).send({
-          message: ERROR_MESSAGES.VALIDATION_ERROR,
-        });
+        next(new BadRequestError(ERROR_MESSAGES.VALIDATION_ERROR));
+      } else {
+        next(err);
       }
-      return next;
     });
 };
 
@@ -59,26 +60,23 @@ export const updateUser = (
   const { name, about } = req.body;
   const userId = req.user?._id;
 
-  return User.findByIdAndUpdate(
+  User.findByIdAndUpdate(
     userId,
     { name, about },
     { new: true, runValidators: true }
   )
     .then((user) => {
       if (!user) {
-        return res
-          .status(HTTP_STATUS_CODES.NOT_FOUND)
-          .send({ message: ERROR_MESSAGES.USER_NOT_FOUND });
+        throw new NotFoundError(ERROR_MESSAGES.USER_NOT_FOUND);
       }
-      return res.send({ data: user });
+      res.send({ data: user });
     })
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res.status(HTTP_STATUS_CODES.BAD_REQUEST).send({
-          message: ERROR_MESSAGES.VALIDATION_ERROR,
-        });
+        next(new BadRequestError(ERROR_MESSAGES.VALIDATION_ERROR));
+      } else {
+        next(err);
       }
-      return next;
     });
 };
 
@@ -90,50 +88,39 @@ export const updateAvatar = (
   const { avatar } = req.body;
   const userId = req.user?._id;
 
-  return User.findByIdAndUpdate(
-    userId,
-    { avatar },
-    { new: true, runValidators: true }
-  )
+  User.findByIdAndUpdate(userId, { avatar }, { new: true, runValidators: true })
     .then((user) => {
       if (!user) {
-        return res
-          .status(HTTP_STATUS_CODES.NOT_FOUND)
-          .send({ message: ERROR_MESSAGES.USER_NOT_FOUND });
+        throw new NotFoundError(ERROR_MESSAGES.USER_NOT_FOUND);
       }
-      return res.send({ data: user });
+      res.send({ data: user });
     })
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res.status(HTTP_STATUS_CODES.BAD_REQUEST).send({
-          message: ERROR_MESSAGES.VALIDATION_ERROR,
-        });
+        next(new BadRequestError(ERROR_MESSAGES.VALIDATION_ERROR));
+      } else {
+        next(err);
       }
-      return next;
     });
 };
 
 export const login = (req: Request, res: Response, next: NextFunction) => {
   const { email, password } = req.body;
 
-  return User.findOne({ email })
+  User.findOne({ email })
     .select("+password")
     .then((user) => {
       if (!user) {
-        return res
-          .status(HTTP_STATUS_CODES.NOT_FOUND_LOGIN)
-          .send({ message: ERROR_MESSAGES.EMAIL_OR_PASSWORD_NOT_FOUND });
+        throw new UnauthorizedError(ERROR_MESSAGES.EMAIL_OR_PASSWORD_NOT_FOUND);
       }
       return bcrypt.compare(password, user.password).then((matched) => {
         if (!matched) {
-          return res
-            .status(HTTP_STATUS_CODES.BAD_REQUEST)
-            .send({ message: ERROR_MESSAGES.EMAIL_OR_PASSWORD_ERROR });
+          throw new UnauthorizedError(ERROR_MESSAGES.EMAIL_OR_PASSWORD_ERROR);
         }
         const token = jwt.sign({ _id: user._id }, "some-secret-key", {
           expiresIn: "7d",
         });
-        return res.send({ token });
+        res.send({ token });
       });
     })
     .catch(next);
@@ -146,14 +133,12 @@ export const getUserMe = (
 ) => {
   const userId = req.user?._id;
 
-  return User.findById(userId)
+  User.findById(userId)
     .then((user) => {
       if (!user) {
-        return res
-          .status(HTTP_STATUS_CODES.NOT_FOUND)
-          .send({ message: ERROR_MESSAGES.USER_NOT_FOUND });
+        throw new NotFoundError(ERROR_MESSAGES.USER_NOT_FOUND);
       }
-      return res.send({ data: user });
+      res.send({ data: user });
     })
     .catch(next);
 };

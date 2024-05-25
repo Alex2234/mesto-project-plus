@@ -2,9 +2,14 @@ import { Request, Response, NextFunction } from "express";
 import Card from "../models/card";
 import { HTTP_STATUS_CODES, ERROR_MESSAGES } from "../utils/constants";
 import { MeRequest } from "../types";
+import {
+  BadRequestError,
+  NotFoundError,
+  ForbiddenError,
+} from "../errors/customErrors";
 
 export const getCards = (req: Request, res: Response, next: NextFunction) => {
-  return Card.find({})
+  Card.find({})
     .then((cards) => res.status(HTTP_STATUS_CODES.OK).send({ data: cards }))
     .catch(next);
 };
@@ -17,15 +22,14 @@ export const createCard = (
   const { name, link } = req.body;
   const owner = req.user?._id;
 
-  return Card.create({ name, link, owner })
+  Card.create({ name, link, owner })
     .then((card) => res.status(HTTP_STATUS_CODES.CREATED).send({ data: card }))
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res.status(HTTP_STATUS_CODES.BAD_REQUEST).send({
-          message: ERROR_MESSAGES.VALIDATION_ERROR,
-        });
+        next(new BadRequestError(ERROR_MESSAGES.VALIDATION_ERROR));
+      } else {
+        next(err);
       }
-      return next;
     });
 };
 
@@ -37,16 +41,13 @@ export const deleteCard = (
   const { cardId } = req.params;
   const userId = req.user?._id;
 
-  return Card.findById(cardId)
+  Card.findById(cardId)
     .then((card) => {
       if (!card) {
-        return res.status(HTTP_STATUS_CODES.NOT_FOUND).send({
-          message: ERROR_MESSAGES.CARD_NOT_FOUND,
-        });
-      } else if (card.owner.toString() !== userId) {
-        res
-          .status(HTTP_STATUS_CODES.FORBIDDEN)
-          .send({ message: ERROR_MESSAGES.FORBIDDEN_CARD });
+        throw new NotFoundError(ERROR_MESSAGES.CARD_NOT_FOUND);
+      }
+      if (card.owner.toString() !== userId) {
+        throw new ForbiddenError(ERROR_MESSAGES.FORBIDDEN_CARD);
       }
       return card
         .remove()
@@ -59,26 +60,23 @@ export const likeCard = (req: MeRequest, res: Response, next: NextFunction) => {
   const { cardId } = req.params;
   const userId = req.user?._id;
 
-  return Card.findByIdAndUpdate(
+  Card.findByIdAndUpdate(
     cardId,
     { $addToSet: { likes: userId } },
     { new: true }
   )
     .then((card) => {
       if (!card) {
-        return res.status(HTTP_STATUS_CODES.NOT_FOUND).send({
-          message: ERROR_MESSAGES.CARD_NOT_FOUND,
-        });
+        throw new NotFoundError(ERROR_MESSAGES.CARD_NOT_FOUND);
       }
-      return res.send({ data: card });
+      res.send({ data: card });
     })
     .catch((err) => {
       if (err.name === "CastError") {
-        return res.status(HTTP_STATUS_CODES.BAD_REQUEST).send({
-          message: ERROR_MESSAGES.VALIDATION_ERROR,
-        });
+        next(new BadRequestError(ERROR_MESSAGES.VALIDATION_ERROR));
+      } else {
+        next(err);
       }
-      return next;
     });
 };
 
@@ -90,25 +88,18 @@ export const dislikeCard = (
   const { cardId } = req.params;
   const userId = req.user?._id;
 
-  return Card.findByIdAndUpdate(
-    cardId,
-    { $pull: { likes: userId } },
-    { new: true }
-  )
+  Card.findByIdAndUpdate(cardId, { $pull: { likes: userId } }, { new: true })
     .then((card) => {
       if (!card) {
-        return res.status(HTTP_STATUS_CODES.NOT_FOUND).send({
-          message: ERROR_MESSAGES.CARD_NOT_FOUND,
-        });
+        throw new NotFoundError(ERROR_MESSAGES.CARD_NOT_FOUND);
       }
-      return res.send({ data: card });
+      res.send({ data: card });
     })
     .catch((err) => {
       if (err.name === "CastError") {
-        return res.status(HTTP_STATUS_CODES.BAD_REQUEST).send({
-          message: ERROR_MESSAGES.VALIDATION_ERROR,
-        });
+        next(new BadRequestError(ERROR_MESSAGES.VALIDATION_ERROR));
+      } else {
+        next(err);
       }
-      return next;
     });
 };
