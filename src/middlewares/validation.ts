@@ -55,13 +55,15 @@ export const validationGetUserId = celebrate({
 
 export const validationUpdateUser = celebrate({
   body: Joi.object().keys({
-    name: Joi.string().min(2).max(30).messages({
+    name: Joi.string().min(2).max(30).required().messages({
       "string.min": "Имя должно содержать не менее 2 символов",
       "string.max": "Имя должно содержать максимум 30 символов",
+      "any.required": "Имя пользователя обязательно для заполнения",
     }),
-    about: Joi.string().min(2).max(200).messages({
+    about: Joi.string().min(2).max(200).required().messages({
       "string.min": "Описание должно содержать не менее 2 символов",
       "string.max": "Описание должно содержать максимум 30 символов",
+      "any.required": "Описание пользователя обязательно для заполнения",
     }),
   }),
 });
@@ -69,6 +71,7 @@ export const validationUpdateUser = celebrate({
 export const validationUpdateAvatar = celebrate({
   body: Joi.object().keys({
     avatar: Joi.string()
+      .required()
       .custom((value, helpers) => {
         if (!validationUrl(value)) {
           return helpers.error("any.invalid");
@@ -76,6 +79,7 @@ export const validationUpdateAvatar = celebrate({
         return value;
       })
       .messages({
+        "any.required": "Строка URL для аватара обязательна для заполнения",
         "any.invalid": "Неправильный формат URL для аватара",
       }),
   }),
